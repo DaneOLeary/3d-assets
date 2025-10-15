@@ -1,44 +1,19 @@
-// 🔧 View3D External Loader — Webflow-safe version
+// 🧠 Webflow-safe EGJS View3D loader — works with ESM-only builds
 (async () => {
-  console.log("🔄 Loading EGJS View3D...");
+  console.log("🔄 Loading EGJS View3D (module bridge)...");
 
-  const s = document.createElement("script");
-  s.src = "https://cdn.jsdelivr.net/npm/@egjs/view3d/dist/view3d.pkgd.min.js";
-  s.async = true;
+  try {
+    const module = await import("https://cdn.jsdelivr.net/npm/@egjs/view3d/dist/view3d.esm.js");
 
-  s.onload = () => {
-    try {
-      // EGJS uses UMD — expose it manually if needed
-      if (window.eg === undefined && typeof eg !== "undefined") {
-        window.eg = eg;
-      }
-      if (window.eg && window.eg.view3d) {
-        console.log("✅ EGJS View3D dynamically loaded and attached");
-        document.dispatchEvent(new CustomEvent("egjs-ready"));
-      } else {
-        console.error("❌ EGJS script loaded but no global export found");
-        console.log("🧩 Attempting fallback global attach...");
-        try {
-          // fallback if 'eg' is nested under window.default
-          if (window.default && window.default.eg) {
-            window.eg = window.default.eg;
-            document.dispatchEvent(new CustomEvent("egjs-ready"));
-            console.log("✅ Fallback EGJS global attach successful");
-          } else {
-            console.error("❌ Fallback attach failed — no EGJS export found.");
-          }
-        } catch (err2) {
-          console.error("❌ Secondary attach error:", err2);
-        }
-      }
-    } catch (err) {
-      console.error("❌ EGJS attach error:", err);
+    // Explicitly attach to window so Webflow scripts can access it
+    if (module && module.View3D) {
+      window.eg = { view3d: module };
+      console.log("✅ EGJS View3D (ESM) imported and globally attached");
+      document.dispatchEvent(new CustomEvent("egjs-ready"));
+    } else {
+      console.error("❌ ESM import succeeded but View3D not found in module:", module);
     }
-  };
-
-  s.onerror = (err) => {
-    console.error("❌ Failed to load EGJS script:", err);
-  };
-
-  document.head.appendChild(s);
+  } catch (err) {
+    console.error("❌ Failed to import EGJS View3D as module:", err);
+  }
 })();
